@@ -1,38 +1,17 @@
-var nconf = require("nconf");
-var async = require("async");
-var logger = require("winston");
-var fork = require("child_process");
-var server = require("./config/initializers/server");
+var PORT = 33333;
+var HOST = "127.0.0.1";
 
-require("dotenv").load();
+var dgram = require("dgram");
+var server = dgram.createSocket("udp4");
 
-// run mongo server
-fork.exec("mongod");
-
-// Set up configs
-nconf.use("memory");
-// First load command line arguments
-nconf.argv();
-// Load environment variables
-nconf.env();
-
-// Load config file for the environment
-require("./config/enviroments/" + nconf.get("NODE_ENV"));
-
-logger.info("[APP] Starting server initialization");
-
-// Initialize Modules
-async.series([
-  function initializeDBConnection(callback) {
-    require("./config/initializers/database")(callback);
-  },
-  function startServer(callback) {
-    server(callback);
-  }
-], function(err) {
-  if (err) {
-    logger.error("[APP] initialization failed", err);
-  } else {
-    logger.info("[APP] initialized SUCCESSFULLY");
-  }
+server.on("listening", function() {
+  var address = server.address();
+  console.log("UDP Server listening on " + address.address + ":" + address.port);
 });
+
+server.on("message", function(message, remote) {
+  console.log(remote.address + ":" + remote.port + " - " + message);
+
+});
+
+server.bind(PORT, HOST);
